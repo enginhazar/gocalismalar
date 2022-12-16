@@ -3,6 +3,7 @@
 package main
 
 import (
+	"Project1/pakets"
 	"encoding/json"
 	"fmt"
 	"github.com/streadway/amqp"
@@ -10,21 +11,34 @@ import (
 	"time"
 )
 
-type Tarih struct {
-	time.Time
-}
-type sicil struct {
-	Sicilno     int32
-	TcKimlikNo  int64
-	Adi         string
-	Soyadi      string
-	Adres       string
-	DogumTarihi Tarih
-}
+//type Tarih struct {
+//	time.Time
+//}
+//type sicil struct {
+//	Sicilno     int32
+//	TcKimlikNo  int64
+//	Adi         string
+//	Soyadi      string
+//	Adres       string
+//	DogumTarihi Tarih
+//}
 
 func main() {
 
-	rabbitMqConsume()
+	elastic, _err := pakets.NewElasticClient() /// elasticsearch client oluşturuluyor
+
+	if _err != nil {
+		fmt.Println("error connection")
+		log.Fatalln("connection error")
+		log.Fatalln(_err)
+		return
+	}
+
+	s := pakets.Sicil{Sicilno: 1, Adi: "engin", TcKimlikNo: 37392047400, Adres: "Yüzüncü yıl", DogumTarihi: pakets.Tarih{time.Date(2021, 8, 15, 14, 30, 45, 100, time.Local)}, Soyadi: "Hazar"}
+
+	elastic.CreateIndex("sicil")
+	elastic.InsertDocument(s)
+	//rabbitMqConsume()
 
 }
 
@@ -55,7 +69,7 @@ func rabbitMqConsume() {
 	go func() {
 		layout := `"2006-01-02T15:04:05"`
 		for d := range msgs {
-			var gosicil sicil
+			var gosicil pakets.Sicil
 			jsonveri := []byte(d.Body)
 			err := json.Unmarshal(jsonveri, &gosicil)
 			if err != nil {
@@ -83,17 +97,17 @@ func rabbitMqConsume() {
 
 // UnmarshalJSON / Unmarshall (decode) işlemi sırasında Tarih alanı formatı C# 'tan yazılan formata uygun şekilde parse edilmesi
 // / için yazıldı
-func (t *Tarih) UnmarshalJSON(b []byte) (err error) {
-	layout := `"2006-01-02T15:04:05"`
-
-	date, err := time.Parse(layout, string(b))
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	t.Time = date
-	return
-}
+//func (t *Tarih) UnmarshalJSON(b []byte) (err error) {
+//	layout := `"2006-01-02T15:04:05"`
+//
+//	date, err := time.Parse(layout, string(b))
+//	if err != nil {
+//		log.Println(err)
+//		return err
+//	}
+//	t.time = date
+//	return
+//}
 
 //func main() {
 //	pakets.NotifyTest()
